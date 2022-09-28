@@ -5,12 +5,17 @@ import { Html5QrcodeCameraScanConfig } from 'html5-qrcode/esm/html5-qrcode';
 
 const defaultConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
 const useScanner = (elementId: string, config: Html5QrcodeCameraScanConfig = defaultConfig) => {
-  const [code, setCode] = React.useState<Html5QrcodeResult | null>(null);
+  const [code, setCode] = React.useState<string | null>(null);
   const [error, setError] = React.useState<Error | null>(null);
+  const html5QrCode = React.useRef<Html5Qrcode | null>(null);
 
-  const onScanSuccess: QrcodeSuccessCallback = React.useCallback((decodedText, decodedResult) => {
+  React.useEffect(() => {
+    html5QrCode.current = new Html5Qrcode(elementId);
+  });
+
+  const onScanSuccess: QrcodeSuccessCallback = React.useCallback((decodedText) => {
     // handle the scanned code as you like, for example:
-    setCode(decodedResult);
+    setCode(decodedText);
   },[]);
 
   const onScanFailure: QrcodeErrorCallback = React.useCallback((qrError) => {
@@ -21,10 +26,9 @@ const useScanner = (elementId: string, config: Html5QrcodeCameraScanConfig = def
   }, []);
 
   const start = React.useCallback(() => {
-    const html5QrCode = new Html5Qrcode(elementId);
 
     // If you want to prefer back camera
-    html5QrCode.start(
+    html5QrCode.current?.start(
       { facingMode: "environment" },
       config,
       onScanSuccess,
@@ -45,7 +49,12 @@ const useScanner = (elementId: string, config: Html5QrcodeCameraScanConfig = def
   );
     html5QrcodeScanner.render(onScanSuccess, onScanFailure); */
   }, [elementId]);
-  return { code, error, start };
+
+  const scanFile = (file: File) => {
+    html5QrCode.current?.scanFile(file).then((decodedText) => setCode(decodedText)).catch((err) => setError(new Error(err)));
+  };
+  
+  return { code, error, start, scanFile };
 };
 
 export default useScanner;
